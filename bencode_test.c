@@ -40,13 +40,15 @@ const char *valid_samples[] = {
 
 /* spec does not allow, but we parse them for robustness */
 const char *loose_samples[] = {
-    "i9999999999999999999999999999999999999999999999999e", /* parse to LLONG_MAX */
+    "i99999999999999999999999999999999999999999999999999e", /* parse to LLONG_MAX */
+    "i-9999999999999999999999999999999999999999999999999e", /* parse to LLONG_MIN */
     "i03e",
     "i-0e",
     NULL
 };
     
 const char *invalid_samples[] = {
+    "",
     "1234",
     "i1234",
     "12:abc",
