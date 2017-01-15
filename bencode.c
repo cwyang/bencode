@@ -155,6 +155,7 @@ out:
 #define CHECK2(COND, CODE) do {                 \
         if (COND) {                             \
             be_free(ret);                       \
+            ret = NULL;                         \
             DO_ERR(CODE);                       \
         }                                       \
     } while (0)
@@ -315,29 +316,29 @@ void be_dump(be_node_t *node) {
     printf("\n");
 }
 
-#define DSTBUF (outBuf ? outBuf : tmpBuf)    
+#define TMPBUFLEN 32    /* enough to hold LLONG_MAX and some chars */
 
 static ssize_t be_encode_str(const be_str_t *str, char *outBuf, size_t outBufLen) 
 {
-    char tmpBuf[32];
-    int sz = snprintf(DSTBUF, outBufLen, "%lld:", str->len);
-    if (outBuf) {
-        if (outBufLen == 0)
-            return -1;
-        outBuf += sz, outBufLen -=sz;
-        if (outBufLen < str->len)
-            return -1;
-        memcpy(outBuf, str->buf, str->len);
-    }
-    sz += str->len;
-    return sz;
+    char tmpBuf[TMPBUFLEN];
+    int sz = snprintf(tmpBuf, TMPBUFLEN, "%lld:", str->len);
+
+    if (outBuf == NULL)
+        return sz + str->len;
+
+    if (sz + str->len > outBufLen)
+        return -1;
+    
+    memcpy(outBuf, tmpBuf, sz);
+    memcpy(outBuf+sz, str->buf, str->len);
+    return sz + str->len;
 }
 
 /*
   when outBuf == NULL, be_encode returns outBufLen needed 
 */
 ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen) {
-    char tmpBuf[32];
+    char tmpBuf[TMPBUFLEN];
     ssize_t r;
     int sz = 1, first = 1;
     list_t *l;
@@ -347,7 +348,12 @@ ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen) {
     
     switch (node->type) {
     case NUM:
-        sz = snprintf(DSTBUF, outBufLen, "i%llde", node->x.num);
+        sz = snprintf(tmpBuf, TMPBUFLEN, "i%llde", node->x.num);
+        if (outBuf != NULL) {
+            if (sz > outBufLen)
+                return -1;
+            strncpy(outBuf, tmpBuf, sz);
+        }
         break;
     case STR:
         sz = be_encode_str(&node->x.str, outBuf, outBufLen);
