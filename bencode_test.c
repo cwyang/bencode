@@ -18,7 +18,7 @@
 
 #include "bencode.h"
 
-const char *sample="d8:announce35:udp://tracker.openbittorrent.com:8013:creation datei1327049827e4:infod6:lengthi20e4:name10:sample.txt12:piece lengthi65536e6:pieces20:..R....x...d.......17:privatei1eee";
+const char *sample="d4:testl4:teste8:announce35:udp://tracker.openbittorrent.com:8013:creation datei1327049827e4:infod6:lengthi20e4:name10:sample.txt12:piece lengthi65536e6:pieces20:..R....x...d.......17:privatei1eee";
 
 int main(void) 
 {

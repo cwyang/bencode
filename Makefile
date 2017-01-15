@@ -8,7 +8,10 @@
 
 CC = gcc
 
-CCFLAGS = -g
+GCOV_CCFLAGS = -fprofile-arcs -ftest-coverage
+GCOV_OUTPUT = *.gcda *.gcno *.gcov 
+
+CCFLAGS = -g $(GCOV_CCFLAGS)
 LIBNAME = libbencode.a
 TARGET = $(LIBNAME)
 LIB_CFILES = bencode.c
@@ -22,6 +25,7 @@ bencode.o: bencode.c bencode.h list.h
 
 test: bencode_test.c $(TARGET)
 	$(CC) $(CCFLAGS)  bencode_test.c -o $@ $(LIBNAME)
+	./test
 
 clean:
 	rm -f $(TARGET) *.o test *~
