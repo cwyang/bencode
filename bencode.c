@@ -27,16 +27,16 @@
 //#define BE_DEBUG
 
 static be_node_t *be_alloc(enum be_type type) {
-	be_node_t *ret = BE_CALLOC(1, sizeof(be_node_t));
-	if (ret) {
-		ret->type = type;
+    be_node_t *ret = BE_CALLOC(1, sizeof(be_node_t));
+    if (ret) {
+        ret->type = type;
         init_list_head(&ret->link);
         if (type == LIST)
             init_list_head(&ret->x.list_head);
         else if (type == DICT)
             init_list_head(&ret->x.dict_head);
     }
-	return ret;
+    return ret;
 }
 
 void be_free(be_node_t *node) {
@@ -46,7 +46,7 @@ void be_free(be_node_t *node) {
         return;
     
     list_del(&node->link);
-	switch (node->type) {
+    switch (node->type) {
     case STR:
         BE_FREE(node->x.str.buf);
         break;
@@ -68,8 +68,8 @@ void be_free(be_node_t *node) {
     default:
         assert(0);
         break;
-	}
-	BE_FREE(node);
+    }
+    BE_FREE(node);
 }
 
 /* Parse until non-digit marker occurs.
@@ -124,7 +124,7 @@ static be_str_t be_decode_str(const char *buf, size_t len, size_t *rx) {
     printf("%s: %s %d\n", __FUNCTION__, buf, (int) len);
 #endif
 
-	long long int slen = be_decode_int(buf, len, &n);
+    long long int slen = be_decode_int(buf, len, &n);
 
     EAT_N(buf,len,n);
     
@@ -144,13 +144,13 @@ static be_str_t be_decode_str(const char *buf, size_t len, size_t *rx) {
     
 out:
     *rx = orglen - len;
-	return str;
+    return str;
 }
 
 #define DO_ERR(CODE) do { errno = CODE; goto out; } while (0)
-#define ALLOC(T) do {                    \
-        ret = be_alloc(T);               \
-        if (ret == NULL) DO_ERR(ENOMEM); \
+#define ALLOC(T) do {                           \
+        ret = be_alloc(T);                      \
+        if (ret == NULL) DO_ERR(ENOMEM);        \
     } while (0)
 #define CHECK2(COND, CODE) do {                 \
         if (COND) {                             \
@@ -162,13 +162,12 @@ out:
 #define CHECK(COND) CHECK2(COND,EINVAL)
 #define EAT_CHECK(BUF,LEN) do {                 \
         EAT(BUF,LEN);                           \
-        CHECK(((LEN) == 0));                   \
+        CHECK(((LEN) == 0));                    \
     } while (0)
 
 static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth) {
     size_t orglen = len, n;
-	be_node_t *ret = NULL, *entry;
-    unsigned int i = 0;
+    be_node_t *ret = NULL, *entry;
 
 #ifdef BE_DEBUG
     printf("%s: %s %d %d\n", __FUNCTION__, buf, (int) len, depth);
@@ -179,12 +178,12 @@ static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth)
         goto out;
     }
     
-	if (len == 0) {
+    if (len == 0) {
         errno = EINVAL;
         goto out;
     }
 
-	switch (*buf) {
+    switch (*buf) {
     case 'i':
         ALLOC(NUM);
         EAT_CHECK(buf, len);
@@ -233,7 +232,7 @@ static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth)
     default: // error
         errno = EINVAL;
         goto out;
-	}
+    }
 
 out:
     *rx = orglen - len;
@@ -252,7 +251,7 @@ be_node_t *be_decode(const char *inBuf, size_t inBufLen, size_t *readAmount) {
 static void newline(int indent) {
     int i;
     putchar('\n');
-	for (i = 0; i < indent; i++)
+    for (i = 0; i < indent; i++)
         putchar(' ');
 }
 static int be_str_dump(be_str_t *str) 
@@ -312,7 +311,7 @@ static void be_dump1(be_node_t *node, int indent) {
 }
 
 void be_dump(be_node_t *node) {
-	be_dump1(node, 0);
+    be_dump1(node, 0);
     printf("\n");
 }
 
@@ -340,7 +339,7 @@ static ssize_t be_encode_str(const be_str_t *str, char *outBuf, size_t outBufLen
 ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen) {
     char tmpBuf[TMPBUFLEN];
     ssize_t r;
-    int sz = 1, first = 1;
+    int sz = 1;
     list_t *l;
 
     if (outBuf && outBufLen == 0)
