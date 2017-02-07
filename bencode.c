@@ -63,6 +63,7 @@ void be_free(be_node_t *node) {
             be_dict_t *entry = list_entry(l, be_dict_t, link);
             BE_FREE(entry->key.buf);
             be_free(entry->val);
+            BE_FREE(entry);
         }
         break;
     default:

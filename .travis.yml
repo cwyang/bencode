@@ -3,6 +3,7 @@ language:
  - clang
 before_install:
  - pip install --user cpp-coveralls --use-mirrors
+ - sudo apt-get install valgrind
 script:
  - make && make test
 after_success:

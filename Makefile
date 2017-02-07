@@ -25,7 +25,7 @@ bencode.o: bencode.c bencode.h list.h
 
 test: bencode_test.c $(TARGET)
 	$(CC) $(CCFLAGS)  bencode_test.c -o $@ $(LIBNAME)
-	./test
+	valgrind --leak-check=full --error-exitcode=1 ./test
 
 clean:
 	rm -f $(TARGET) *.o test *~
