@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "bencode.h"
 
@@ -30,11 +32,13 @@ const char *valid_samples[] = {
     "l4:spam4:eggse",
     "le",
     "d3:cow3:moo4:spam4:eggse",
+    "d3:cowi123ee",    
     "d4:spaml1:a1:bee",
     "d9:publisher3:bob17:publisher-webpage15:www.example.com18:publisher.location4:homee",
     "de",
     /* other cases */
     "llllllll4:testeeeeeeee",
+    "d8:intervali1800e5:peers6:" "\x0a\x02\x14\x0b\x1a\xe2" "e",
     NULL
 };
 
@@ -100,6 +104,52 @@ static void should_fail(const char *c)
     BE_ASSERT(node == NULL);
 }
 
+static void gen_dict_bt_resp() 
+{
+    int i;
+    be_node_t *node, *dict, *peers;
+    char buf[INET6_ADDRSTRLEN], *c;
+    size_t n;
+    uint32_t v4;
+    uint8_t v6[16];
+
+    peers = be_decode("le", 2, &n);
+    BE_ASSERT(peers != NULL);
+
+    for (i = 0; i < 16; i++)
+        v6[i] = i;
+    v4=htonl(0x0a000001);
+    
+#define NUM_PEERS 50
+    for (i = 0; i < NUM_PEERS; i++) {
+        dict = be_alloc(DICT);
+        BE_ASSERT(dict != NULL);
+        if (0) {
+            inet_ntop(AF_INET6, v6, buf, INET6_ADDRSTRLEN);
+        } else {
+            inet_ntop(AF_INET, &v4, buf, INET_ADDRSTRLEN);
+        }
+        be_dict_add_str(dict, "ip", buf);
+        be_dict_add_str(dict, "id", "12345678901234567890");
+        be_dict_add_num(dict, "port", ntohs(53764));
+        list_add_tail(&dict->link, &peers->x.list_head);
+    }
+    node = be_alloc(DICT);
+    BE_ASSERT(node != NULL);
+    be_dict_add(node, "peers", peers);
+
+//    be_dump(node);
+    n = be_encode(node, NULL, 0);
+    c = BE_MALLOC(n+1);
+    BE_ASSERT(n > 0 && c != NULL);
+    n = be_encode(node, c, n);
+    c[n] = '\0';
+    
+    BE_FREE(c);
+    
+    be_free(node);
+}
+
 int main(void) 
 {
     be_node_t *node;
@@ -141,6 +191,8 @@ int main(void)
     be_dump(node);
     be_free(node);
 
+    gen_dict_bt_resp();
+    
     printf("\nAll tests passed!\n");
 
     return 0;

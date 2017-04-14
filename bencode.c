@@ -26,7 +26,7 @@
 
 //#define BE_DEBUG
 
-static be_node_t *be_alloc(enum be_type type) {
+be_node_t *be_alloc(enum be_type type) {
     be_node_t *ret = BE_CALLOC(1, sizeof(be_node_t));
     if (ret) {
         ret->type = type;
@@ -59,7 +59,7 @@ void be_free(be_node_t *node) {
         }
         break;
     case DICT:
-        list_for_each_safe(l, tmp, &node->x.list_head) {
+        list_for_each_safe(l, tmp, &node->x.dict_head) {
             be_dict_t *entry = list_entry(l, be_dict_t, link);
             BE_FREE(entry->key.buf);
             be_free(entry->val);
@@ -407,3 +407,107 @@ ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen) {
     }
     return sz;
 }
+/*************************/
+void be_dict_free(be_dict_t *dict) {
+    if (dict == NULL)
+        return;
+    list_del(&dict->link);
+    BE_FREE(dict->key.buf);
+    be_free(dict->val);
+    BE_FREE(dict);
+}
+
+be_node_t *be_dict_lookup(be_node_t *node, const char *key, be_dict_t **dict_entry) {
+    list_t *l;
+
+    if (node->type != DICT)
+        return NULL;
+    list_for_each(l, &node->x.dict_head) {
+        be_dict_t *entry = list_entry(l, be_dict_t, link);
+
+        if (entry->key.buf && (strcmp(key, entry->key.buf) == 0)) {
+            if (dict_entry) *dict_entry = entry;
+            return entry->val;
+        }
+    }
+    return NULL;
+}
+long long int be_dict_lookup_num(be_node_t *node, const char *key) {
+    be_node_t *entry;
+    entry = be_dict_lookup(node, key, NULL);
+    if (entry == NULL || entry->type != NUM)
+        return -1;
+    return entry->x.num;
+}
+char *be_dict_lookup_cstr(be_node_t *node, const char *key) {
+    be_node_t *entry;
+    entry = be_dict_lookup(node, key, NULL);
+    if (entry == NULL || entry->type != STR)
+        return NULL;
+    return entry->x.str.buf;
+}
+char *be_dict_lookup_cstr_size(be_node_t *node, const char *key, int *size) {
+    be_node_t *entry;
+    entry = be_dict_lookup(node, key, NULL);
+    if (entry == NULL || entry->type != STR)
+        return NULL;
+    if (size) *size = entry->x.str.len;
+    return entry->x.str.buf;
+}
+int be_dict_add(be_node_t *dict, const char *keystr, be_node_t *val) {
+    be_dict_t *dict_entry = BE_CALLOC(1, sizeof(be_dict_t));
+    if (dict_entry == NULL)
+        return -1; 
+    init_list_head(&dict_entry->link);
+
+    be_str_t *key = &dict_entry->key;
+    key->buf = BE_STRDUP(keystr);
+    key->len = strlen(keystr);
+    if (key->buf == NULL) {
+        BE_FREE(dict_entry);
+        return -1;
+    }
+    dict_entry->val = val;
+
+    list_add_tail(&dict_entry->link, &dict->x.dict_head);
+    return 0;
+}
+int be_dict_add_str(be_node_t *dict, const char *keystr, char *valstr) {
+    be_node_t *val = be_alloc(STR);
+    if (val == NULL)
+        return -1;
+    val->x.str.buf = BE_STRDUP(valstr);
+    val->x.str.len = strlen(valstr);
+    return be_dict_add(dict, keystr, val);
+}
+int be_dict_add_str_with_len(be_node_t *dict, const char *keystr, char *valstr, int len) {
+    be_node_t *val = be_alloc(STR);
+    if (val == NULL)
+        return -1;
+    char *c = BE_MALLOC(len);
+    if (c == NULL) {
+        BE_FREE(c);
+        return -1;
+    }
+    memcpy(c, valstr, len);
+    val->x.str.buf = c;
+    val->x.str.len = len;
+    return be_dict_add(dict, keystr, val);
+}
+int be_dict_add_num(be_node_t *dict, const char *keystr, long long int valnum) {
+    be_node_t *val = be_alloc(NUM);
+    if (val == NULL)
+        return -1;
+    val->x.num = valnum;
+    return be_dict_add(dict, keystr, val);
+}
+be_dict_t *be_dict_entry_alloc(void) 
+{
+    be_dict_t *dict_entry = BE_CALLOC(1, sizeof(be_dict_t));
+    if (dict_entry == NULL)
+        return NULL;
+    init_list_head(&dict_entry->link);
+    return dict_entry;
+}
+
+        

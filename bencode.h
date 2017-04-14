@@ -38,15 +38,29 @@ typedef struct be_node {
     } x;
 } be_node_t;
 
+/** MAIN APIs **/
 extern be_node_t *be_decode(const char *inBuf, size_t inBufLen, size_t *readAmount);
 extern ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen);
+extern be_node_t *be_alloc(enum be_type type);
 extern void be_free(be_node_t *node);
 extern void be_dump(be_node_t *node);
+
+/** DICT APIs **/
+extern void be_dict_free(be_dict_t *dict);
+extern be_node_t *be_dict_lookup(be_node_t *node, const char *key, be_dict_t **dict_entry);
+extern long long int be_dict_lookup_num(be_node_t *node, const char *key);
+extern char *be_dict_lookup_cstr(be_node_t *node, const char *key);
+extern char *be_dict_lookup_cstr_size(be_node_t *node, const char *key, int *size);
+extern int be_dict_add(be_node_t *dict, const char *keystr, be_node_t *val);
+extern int be_dict_add_str(be_node_t *dict, const char *keystr, char *valstr);
+extern int be_dict_add_str_with_len(be_node_t *dict, const char *keystr, char *valstr, int len);
+extern int be_dict_add_num(be_node_t *dict, const char *keystr, long long int valnum);
 
 #define BE_MAX_DEPTH 10 // max depth of composite type (list and dict)
 
 #define BE_MALLOC malloc
 #define BE_CALLOC calloc
-#define BE_FREE free
+#define BE_FREE(x) do { if (x) free(x); x = NULL; } while (0)
+#define BE_STRDUP strdup
 #define BE_ASSERT assert
 #endif
