@@ -24,10 +24,4 @@ project_source_files = [
 
 install_headers(project_headers)
 
-# build_args = [
-# '-Wpedantic',
-# '-Wshadow',
-# ]
-
-# project_target=library('peers', project_source_files, include_directories:incdir, install:true, dependencies:dependencies, link_args:build_args)
-project_target=library('peers', project_source_files)
+project_target=library('bencode', project_source_files)
