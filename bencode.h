@@ -15,6 +15,7 @@
 #define BENCODE_H
 
 #include "list.h"
+#include <sys/types.h>
 
 typedef struct be_str { // data encoding of bencode can be anything,
     char *buf;          // hence we keep length of the string

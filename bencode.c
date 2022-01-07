@@ -128,10 +128,10 @@ static be_str_t be_decode_str(const char *buf, size_t len, size_t *rx) {
     long long int slen = be_decode_int(buf, len, &n);
 
     EAT_N(buf,len,n);
-    
-    if ((len == 0) ||
-        (slen < 0 || slen > len - 1) ||
-        (*buf != ':'))
+
+    if ((len == 0) || (*buf != ':') || slen < 0)
+        goto out;
+    if ((size_t)slen > len - 1)
         goto out;
 
     if ((ret = BE_MALLOC(slen + 1)) == NULL)
@@ -142,7 +142,7 @@ static be_str_t be_decode_str(const char *buf, size_t len, size_t *rx) {
     memcpy(ret, buf + 1, slen);
     ret[slen] = '\0';
     EAT_N(buf,len,slen+1);
-    
+
 out:
     *rx = orglen - len;
     return str;
@@ -184,22 +184,24 @@ static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth)
         goto out;
     }
 
-    switch (*buf) {
-    case 'i':
+    if(*buf == 'i')
+    {
         ALLOC(NUM);
         EAT_CHECK(buf, len);
         ret->x.num = be_decode_int(buf, len, &n); // we parse "i-0e" as 0
         EAT_N(buf,len,n);
         CHECK((*buf != 'e'));
         EAT(buf, len);
-        break;
-    case '0'...'9':
+    }
+    else if(*buf > ('0'-1) && *buf < ('9'+1))
+    {
         ALLOC(STR);
         ret->x.str = be_decode_str(buf, len, &n); // "0" should be return ""
         EAT_N(buf,len,n);
         CHECK((ret->x.str.buf == NULL));
-        break;
-    case 'l':
+    }
+    else if(*buf == 'l')
+    {
         ALLOC(LIST);
         EAT_CHECK(buf,len);
         while (*buf != 'e') { // "le" return empty list
@@ -210,8 +212,9 @@ static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth)
             CHECK((len == 0));
         }
         EAT(buf,len);
-        break;
-    case 'd':
+    }
+    else if(*buf == 'd')
+    {
         ALLOC(DICT);
         EAT_CHECK(buf,len);
         while (*buf != 'e') { // "de" return empty dictionary
@@ -229,8 +232,9 @@ static be_node_t *be_decode1(const char *buf, size_t len, size_t *rx, int depth)
             CHECK((len == 0));
         }
         EAT(buf,len);
-        break;
-    default: // error
+    }
+    else    // error
+    {
         errno = EINVAL;
         goto out;
     }
@@ -272,42 +276,44 @@ static void be_dump1(be_node_t *node, int indent) {
     int sz, first = 1;
     list_t *l;
     
-    switch (node->type) {
-    case NUM:
-        printf("%lld", node->x.num);
-        break;
-    case STR:
-        be_str_dump(&node->x.str);
-        break;
-    case LIST:
-        list_for_each(l, &node->x.list_head) {
-            be_node_t *entry = list_entry(l, be_node_t, link);
-            if (first) {
-                printf("[ ");
-                first = 0;
-            } else {
-                newline(indent);
-                printf (", ");
+    switch (node->type)
+    {
+        case NUM:
+            printf("%lld", node->x.num);
+            break;
+        case STR:
+            be_str_dump(&node->x.str);
+            break;
+        case LIST:
+            list_for_each(l, &node->x.list_head) {
+                be_node_t *entry = list_entry(l, be_node_t, link);
+                if (first) {
+                    printf("[ ");
+                    first = 0;
+                } else {
+                    newline(indent);
+                    printf (", ");
+                }
+                be_dump1(entry, indent+2);
             }
-            be_dump1(entry, indent+2);
-        }
-        printf("]");
-        break;
-    case DICT:
-        list_for_each(l, &node->x.list_head) {
-            be_dict_t *entry = list_entry(l, be_dict_t, link);
-            if (first) {
-                printf("{ ");
-                first = 0;
-            } else {
-                newline(indent);
-                printf (", ");
+            printf("]");
+            break;
+        case DICT:
+            list_for_each(l, &node->x.list_head) {
+                be_dict_t *entry = list_entry(l, be_dict_t, link);
+                if (first) {
+                    printf("{ ");
+                    first = 0;
+                } else {
+                    newline(indent);
+                    printf (", ");
+                }
+                sz = be_str_dump(&entry->key);
+                printf(": ");
+                be_dump1(entry->val, indent+sz+4);
             }
-            sz = be_str_dump(&entry->key);
-            printf(": ");
-            be_dump1(entry->val, indent+sz+4);
-        }
-        printf("}");
+            printf("}");
+            break;
     }
 }
 
@@ -326,7 +332,7 @@ static ssize_t be_encode_str(const be_str_t *str, char *outBuf, size_t outBufLen
     if (outBuf == NULL)
         return sz + str->len;
 
-    if (sz + str->len > outBufLen)
+    if ((size_t)sz + str->len > outBufLen)
         return -1;
     
     memcpy(outBuf, tmpBuf, sz);
@@ -349,8 +355,10 @@ ssize_t be_encode(const be_node_t *node, char *outBuf, size_t outBufLen) {
     switch (node->type) {
     case NUM:
         sz = snprintf(tmpBuf, TMPBUFLEN, "i%llde", node->x.num);
-        if (outBuf != NULL) {
-            if (sz > outBufLen)
+        if (outBuf != NULL)
+        {
+            if(sz>0)
+            if ((size_t)sz > outBufLen)
                 return -1;
             strncpy(outBuf, tmpBuf, sz);
         }
