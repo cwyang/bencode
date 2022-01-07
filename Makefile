@@ -28,4 +28,4 @@ test: bencode_test.c $(TARGET)
 	valgrind --leak-check=full --error-exitcode=1 ./test
 
 clean:
-	rm -f $(TARGET) *.o test *~
+	rm -f $(TARGET) *.o $(GCOV_OUTPUT) test *~
